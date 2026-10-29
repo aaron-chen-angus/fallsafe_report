@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FallSafe+ Assessment Report Generator</title>
+  <meta name="description" content="Analyse FallSafe+ station outputs, identify static balance, dynamic balance, proprioception and coordination gaps, and generate a 4-week exercise programme with multilingual PDF export.">
+  <meta name="theme-color" content="#02050d">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M32 4 56 18v28L32 60 8 46V18z' fill='%2302050d' stroke='%2318f0ff' stroke-width='4'/%3E%3Cpath d='M32 20v24M20 32h24' stroke='%23ff9a1f' stroke-width='6' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;700;800&family=Noto+Sans+Tamil:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body>
+  <div class="bg-fx" aria-hidden="true"><div class="horizon"></div><div class="grid"></div></div>
+
+  <header class="topbar">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 64 64" aria-hidden="true">
+        <defs><linearGradient id="bm" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#18f0ff"/><stop offset="1" stop-color="#2f7bff"/></linearGradient></defs>
+        <path d="M32 3 57 17.5v29L32 61 7 46.5v-29z" fill="#03081a" stroke="url(#bm)" stroke-width="2.5"/>
+        <path d="M32 11 50 21.5v21L32 53 14 42.5v-21z" fill="none" stroke="#18f0ff" stroke-opacity=".35" stroke-width="1"/>
+        <path d="M32 21v22M21 32h22" stroke="#ff9a1f" stroke-width="5.5" stroke-linecap="round"/>
+      </svg>
+      <div>
+        <h1>FallSafe<span>+</span> Assessment Report Generator</h1>
+        <p>Balance gap analysis · 4-week programme · multilingual PDF</p>
+      </div>
+    </div>
+    <a class="demo-portal" href="https://fallsafe-plus.hpilab.net/" target="_blank" rel="noopener">
+      <span class="orbit"><i></i><i></i><b></b></span>
+      <span class="demo-txt"><small>Live system</small><strong>Launch FallSafe+ Demo</strong><em>fallsafe-plus.hpilab.net</em></span>
+      <span class="demo-arrow">↗</span>
+    </a>
+  </header>
+
+  <main>
+    <section class="intake">
+      <div class="panel">
+        <div class="p-h"><b>01</b> Ingest session files <small>PDF · client-side only</small></div>
+        <label class="drop" id="drop">
+          <input type="file" id="fileInput" accept="application/pdf,.pdf" multiple>
+          <svg class="drop-ico" viewBox="0 0 64 64" fill="none" stroke="#18f0ff" stroke-width="2" aria-hidden="true">
+            <path d="M18 8h20l12 12v36H18z" /><path d="M38 8v12h12" /><path d="M34 46V28m-8 8 8-8 8 8" stroke="#ff9a1f" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <h3>Drop the FallSafe+ station PDFs here</h3>
+          <p>or click to browse — up to 8 files for one client session</p>
+          <p style="margin-top:8px"><code>NAME_ID_Sex_Age_FSST.pdf · _EMG_DB · _EMG_TTT · _BLAZEPOD · _STS · _TUG · _MVC · _MMSE</code></p>
+        </label>
+        <div class="btn-row">
+          <button class="btn ghost" id="btnClear" disabled>Clear session</button>
+        </div>
+        <ul class="filelog" id="fileLog"></ul>
+      </div>
+
+      <div class="panel orange">
+        <div class="p-h"><b>02</b> Station matrix <small id="slotCount">0 / 8 loaded</small></div>
+        <div class="slots" id="slots"></div>
+        <div class="matrix-foot">
+          <div class="progress-bar"><span id="slotBar"></span></div>
+          <span>Missing stations are reported and the analysis continues with available data.</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="toolbar hidden" id="toolbar">
+      <span class="tb-title">03 // Report</span>
+      <div class="seg" id="langSeg" role="group" aria-label="Report language">
+        <button data-lang="en" class="on">English</button><button data-lang="zh">中文</button><button data-lang="ms">Bahasa Melayu</button><button data-lang="ta">தமிழ்</button>
+      </div>
+      <span class="sp"></span>
+      <button class="btn" id="btnJson">Export JSON</button>
+      <button class="btn primary" id="btnPdf">⬇ Download PDF</button>
+    </div>
+
+    <section id="empty" class="empty">
+      <h2>Awaiting session data</h2>
+      <p>All processing runs in your browser — no files are uploaded to any server.</p>
+      <div class="how">
+        <div><b>01</b><span>Upload</span><p>Drop the station PDFs exported by the FallSafe+ pipeline for one client.</p></div>
+        <div><b>02</b><span>Analyse</span><p>Stations are scored and mapped to static balance, dynamic balance, proprioception and coordination.</p></div>
+        <div><b>03</b><span>Prescribe</span><p>A gap-weighted 4-week programme is built from the FallSafe+ exercise libraries.</p></div>
+        <div><b>04</b><span>Export</span><p>Download the report as a PDF in English, Mandarin, Bahasa Melayu or Tamil.</p></div>
+      </div>
+    </section>
+
+    <section id="report" class="rpt dark lang-en" aria-live="polite"></section>
+  </main>
+
+  <footer>
+    <div><span class="f-brand">FALLSAFE+ NEUROCORE</span> · Assessment Report Generator v1.0 · Rehabilitation Research Programme</div>
+    <div>Screening and exercise-planning support only — not a medical diagnosis. · <a href="https://fallsafe-plus.hpilab.net/" target="_blank" rel="noopener">fallsafe-plus.hpilab.net</a></div>
+  </footer>
+
+  <div id="pdfHost" class="pdf-host" aria-hidden="true"></div>
+  <div class="overlay hidden" id="overlay"><div class="panel ov-box"><div class="loader"><i></i><i></i></div><h3 id="ovTitle">Rendering PDF</h3><p id="ovMsg">Composing A4 pages…</p><div class="progress-bar"><span id="ovBar"></span></div></div></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="assets/js/parser.js"></script>
+  <script src="assets/js/exercises.js"></script>
+  <script src="assets/js/analysis.js"></script>
+  <script src="assets/js/programme.js"></script>
+  <script src="assets/js/i18n.js"></script>
+  <script src="assets/js/charts.js"></script>
+  <script src="assets/js/report.js"></script>
+  <script src="assets/js/export.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>
