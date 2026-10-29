@@ -447,3 +447,6 @@ footer .f-brand { font-family: var(--f-disp); letter-spacing: .14em; color: var(
 .rpt .r-stat b { display: block; font-family: var(--f-disp); font-size: 1.2em; color: var(--r-head); margin-top: .15em; }
 .rpt .r-stat b small { font-size: .6em; color: var(--r-sub); font-weight: 600; }
 @media (max-width: 860px) { .rpt.dark .r-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+.rpt .r-tier-basis { margin-top: .5em; padding-top: .5em; border-top: 1px dashed var(--r-line); font-size: .8em; color: var(--r-sub); }
+.rpt .r-stat b.r-stat-sm { font-size: .98em; line-height: 1.25; }

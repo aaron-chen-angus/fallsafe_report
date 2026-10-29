@@ -24,7 +24,8 @@
     'Shumway-Cook, A., Brauer, S., & Woollacott, M. (2000). Predicting the probability for falls in community-dwelling older adults using the Timed Up & Go Test. Physical Therapy, 80(9), 896–903.',
     'Folstein, M. F., Folstein, S. E., & McHugh, P. R. (1975). "Mini-mental state": A practical method for grading the cognitive state of patients for the clinician. Journal of Psychiatric Research, 12(3), 189–198.',
     'Halvarsson, A., Dohrn, I.-M., & Ståhle, A. (2015). Taking balance training for older adults one step further: The rationale for and a description of a proven balance training programme. Clinical Rehabilitation, 29(5), 417–425.',
-    'Wollesen, B., & Voelcker-Rehage, C. (2014). Training effects on motor–cognitive dual-task performance in older adults: A systematic review. European Review of Aging and Physical Activity, 11(1), 5–24.'
+    'Wollesen, B., & Voelcker-Rehage, C. (2014). Training effects on motor–cognitive dual-task performance in older adults: A systematic review. European Review of Aging and Physical Activity, 11(1), 5–24.',
+    'Montero-Odasso, M., Verghese, J., Beauchet, O., & Hausdorff, J. M. (2012). Gait and cognition: A complementary approach to understanding brain function and the risk of falling. Journal of the American Geriatrics Society, 60(11), 2127–2136.'
   ];
 
   FS.buildReport = function (m, lang, theme) {
@@ -102,7 +103,7 @@
           <ul class="r-insights">${ins.map(x => `<li>${esc(x)}</li>`).join('')}</ul>
           ${progLine ? `<p class="r-prog-line">${esc(progLine)}</p>` : ''}
         </div>
-        <div class="r-tier-box band-${tierCol}"><div class="r-tier-box-h">${esc(t('tier'))}: ${esc(t('tier_' + m.tier))}</div><p>${esc(t('tier_' + m.tier + '_d'))}</p></div>
+        <div class="r-tier-box band-${tierCol}"><div class="r-tier-box-h">${esc(t('tier'))}: ${esc(t('tier_' + m.tier))}</div><p>${esc(t('tier_' + m.tier + '_d'))}</p><p class="r-tier-basis">${esc(t('tier_basis', { n: m.flagStations.length, list: m.flagStations.length ? m.flagStations.map(k => t('st_' + k)).join(', ') : t('none'), v: f(m.index) }))}</p></div>
       </div>`);
     push(`<div class="r-legend"><div class="r-legend-h">${esc(t('legend_h'))}</div><p>${esc(t('legend_d'))}</p>
         <div class="r-legend-chips">${[['strength', '≥ 65'], ['monitor', '50 – 64'], ['moderate', '35 – 49'], ['priority', '< 35']].map(([b, r]) => `<span>${bandChip(b)}<i>${r}</i></span>`).join('')}</div></div>`);
@@ -294,6 +295,28 @@
       if (bf.length) push(card('', `<ul class="r-hl">${bf.map(g => `<li>${sevChip(g.sev)} ${esc(findingText(g))}</li>`).join('')}</ul>`));
     }
 
+    /* ===== MMSE / cognition ===== */
+    if (CG) {
+      head('s_mmse', ++sec);
+      const cm = CG.mmse, cat = CG.category;
+      const secs = cm.timeMs ? Math.round(cm.timeMs / 1000) : null, mmss = secs === null ? '—' : Math.floor(secs / 60) + ':' + String(secs % 60).padStart(2, '0');
+      const cb = !CG.valid ? 'moderate' : cat === 'normal' ? 'strength' : cat === 'mild' ? 'moderate' : 'priority';
+      push(`<div class="r-emg-h"><span>${esc(t('st_MMSE'))}</span><b class="band-t-${cb}">${cm.total ?? '—'}<small>/${cm.totalMax ?? '—'}${CG.valid ? '' : ' *'}</small></b></div>`, { keep: true });
+      push(`<p>${esc(t('dd_MMSE'))}</p>`);
+      const dualOK = !!(m.programme && m.programme.dualTask);
+      push(`<div class="r-stats">${[['m_mmse', `${cm.total ?? '—'}<small>/${cm.totalMax ?? '—'}${CG.valid ? '' : ' *'}</small>`, cb], ['m_cog', cat ? esc(t('cog_' + cat)) + (CG.valid ? '' : ' *') : '—', cb], ['mm_time', mmss + '<small> min</small>'], ['mm_dual', esc(t(dualOK ? 'mm_dual_y' : 'mm_dual_n')), dualOK ? 'strength' : 'moderate']]
+        .map(([k, v, b]) => `<div class="r-stat ${b ? 'band-' + b : ''}"><i>${esc(t(k))}</i><b class="r-stat-sm">${v}</b></div>`).join('')}</div>`);
+      const ents = Object.entries(cm.domains).filter(([, v]) => v);
+      if (ents.length) {
+        const mi = ents.map(([k, v]) => { const pc = 100 * v.score / v.max; return { label: `${t(k)} ${v.score}/${v.max}`, value: FS.util.r1(Math.min(100, pc)), band: v.score > v.max ? 'priority' : pc >= 80 ? 'strength' : pc >= 60 ? 'monitor' : pc >= 40 ? 'moderate' : 'priority' }; });
+        push(card(t('mm_domains_h'), chart('hbars', { items: mi, w: 720, labelW: 230 })));
+        push(`<table class="r-table r-mmt"><thead><tr><th>${esc(t('mm_col_domain'))}</th><th>${esc(t('mm_col_score'))}</th><th>${esc(t('mm_col_status'))}</th></tr></thead><tbody>${ents.map(([k, v]) => `<tr><td>${esc(t(k))}</td><td>${v.score} / ${v.max}</td><td class="${v.score > v.max ? 'sv-high' : 'sv-pos'}">${esc(t(v.score > v.max ? 'mm_over' : 'mm_ok'))}</td></tr>`).join('')}</tbody></table>`);
+      }
+      if (!CG.valid) push(`<div class="r-note warn">${esc(t('mm_invalid', { m: cm.totalMax ?? '—' }))}</div>`);
+      if (cat && CG.valid) push(`<div class="r-note info">${esc(t('mm_i_' + cat))}</div>`);
+      push(`<p class="r-muted">${esc(t('mm_why'))}</p>`);
+    }
+
     /* ===== 5. Limb symmetry ===== */
     const rows = [];
     if (TD && TD.strideLenL && TD.strideLenR) rows.push({ label: t('strideLen'), L: TD.strideLenL, R: TD.strideLenR, unit: 'm' });
@@ -324,11 +347,6 @@
         [['m_mvcL', MS.mvc.leftKg], ['m_mvcR', MS.mvc.rightKg]].forEach(([k, v]) => { if (v !== null && v !== undefined) supC.push(card(t(k), chart('bullet', { min: 0, max: hi, value: v, label: f(v) + ' kg', bands: bandsM, ticks: [0, Math.round(mu), hi], unit: 'kg', w: 340 }))); });
       }
       if (supC.length) { push(`<div class="r-dd-h"><span>${esc(t('st_MVC'))}</span><p>${esc(t('dd_MVC'))}</p></div>`, { keep: true }); push(`<div class="r-two">${supC.join('')}</div>`); }
-      if (CG && CG.valid) {
-        const mi = Object.entries(CG.mmse.domains).filter(([, v]) => v).map(([k, v]) => { const pc = 100 * v.score / v.max; return { label: t(k), value: FS.util.r1(pc), band: pc >= 80 ? 'strength' : pc >= 60 ? 'monitor' : pc >= 40 ? 'moderate' : 'priority' }; });
-        push(`<div class="r-dd-h"><span>${esc(t('st_MMSE'))}</span><p>${esc(t('dd_MMSE'))}</p></div>`, { keep: true });
-        push(card(t('mm_h') + ' (%)', chart('hbars', { items: mi, w: 720, labelW: 200 })));
-      }
     }
 
     /* ===== 7. Detailed findings ===== */

@@ -361,7 +361,7 @@
     const severe = index !== null && index < 35;
     if (severe) triggers.push('t_index');
     let tier = 'low';
-    if (severe || (flagStations.size >= 2 && index !== null && index < 50)) tier = 'high';
+    if ((flagStations.size >= 2 && index !== null && index < 50) || (flagStations.size >= 1 && severe)) tier = 'high';
     else if (triggers.length || (index !== null && index < 55) || sevCount('mod') >= 3 || sevCount('high') >= 1) tier = 'moderate';
 
     // ranking of gaps
@@ -370,7 +370,7 @@
     const model = {
       generatedAt: new Date().toISOString(),
       client, present, missing, stations: st, quality: q, domains, index, indexBand: FS.band(index),
-      tier, triggers, findings: F, dq, support, ranked,
+      tier, triggers, flagStations: [...flagStations], findings: F, dq, support, ranked,
       files: parsed.map(p => ({ name: p.filename, station: p.station || null, ok: p.ok, error: p.error || null }))
     };
     model.programme = FS.buildProgramme ? FS.buildProgramme(model) : null;

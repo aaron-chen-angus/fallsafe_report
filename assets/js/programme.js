@@ -32,7 +32,7 @@
     const highRisk = m.tier === 'high';
     const nearFall = !!(m.stations.FSST && m.stations.FSST.data.nearFall);
     const cog = m.support.cognition;
-    const dualTaskOK = !cog || (cog.valid && cog.category === 'normal') || (!cog.valid && cog.mmse.total !== null && cog.mmse.total >= 24);
+    const dualTaskOK = !cog || (cog.valid && cog.category === 'normal');   // an invalid MMSE withholds dual-task work until repeated
 
     // eligibility (safety gating)
     const eligible = FS.EXERCISES.filter(e => {

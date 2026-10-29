@@ -4,6 +4,15 @@
   const FS = root.FS; if (!FS || !FS.LANGS) return;
 
   const en = {
+    tier_basis: 'Why this tier: {n} station(s) flagged ({list}); Balance Index {v}. High needs ≥ 2 flagged stations with Index < 50, or 1 flagged station with Index < 35.',
+    s_mmse: 'Cognition (MMSE)', mm_time: 'Time taken', mm_dual: 'Dual-task training', mm_dual_y: 'Cleared from Week 3', mm_dual_n: 'Withheld',
+    mm_col_domain: 'Domain', mm_col_score: 'Score', mm_col_status: 'Status', mm_ok: 'Valid', mm_over: 'Exceeds maximum',
+    mm_domains_h: 'Domain performance (% of maximum, capped at 100%)',
+    mm_why: 'Walking and balancing while thinking draw on the same brain resources. Lower cognitive scores are linked to slower gait, higher dual-task cost and higher fall risk, so the MMSE guides how safely dual-task training can be added.',
+    mm_i_normal: 'A score of 24–30 is within the normal range. Cognitive capacity is unlikely to limit balance training, so dual-task progressions (movement plus a thinking task) can be introduced from Week 3 once a level is stable.',
+    mm_i_mild: 'A score of 18–23 suggests mild cognitive impairment. Keep sessions simple, supervised and single-task first; discuss the result with a clinician.',
+    mm_i_severe: 'A score below 18 suggests marked cognitive impairment. Train only with supervision and consider referral for professional assessment.',
+    mm_invalid: 'The recorded MMSE data failed validation (domain scores above their maximum and/or a total out of {m} instead of 30). Treat the result as unreliable and repeat the screen; dual-task training is deferred until it is confirmed.',
     s_bp: 'BlazePod Reaction Results', bp_chart_h: 'Reaction time per cue', bp_raw: 'Per-cue time', bp_env: '5-cue moving average', bp_avg: 'Your average', bp_normln: 'Peer norm', bp_out: 'Outlier (removed)', bp_cue: 'Cue',
     bp_avgrt: 'Average reaction time', bp_norm: 'Peer norm (mean RT)', bp_best: 'Fastest cue', bp_slow: 'Slowest cue (valid)', bp_cv: 'Variability (CV)',
     bp_read: 'Each dot is one light cue — lower is faster. The smooth line shows the trend; dashed lines mark your average and the age/sex peer norm. A very slow first cue is usually a warm-up outlier; a steady rise later in the set can mean fatigue or attention drift.',
@@ -47,6 +56,15 @@
   };
 
   const zh = {
+    tier_basis: '判定依据：{n} 个站点出现警示（{list}）；平衡指数 {v}。判为“高”需至少 2 个站点出现警示且指数 < 50，或 1 个站点出现警示且指数 < 35。',
+    s_mmse: '认知功能（MMSE）', mm_time: '用时', mm_dual: '双重任务训练', mm_dual_y: '第 3 周起可进行', mm_dual_n: '暂缓',
+    mm_col_domain: '领域', mm_col_score: '得分', mm_col_status: '状态', mm_ok: '有效', mm_over: '超出满分',
+    mm_domains_h: '各领域表现（占满分百分比，上限 100%）',
+    mm_why: '边走边想、边保持平衡边思考，会占用相同的脑部资源。认知分数较低与步速变慢、双重任务代价增大及跌倒风险升高有关，因此 MMSE 用来判断能否安全加入双重任务训练。',
+    mm_i_normal: '24–30 分属正常范围。认知能力不太可能限制平衡训练，因此当某级别稳定后，可从第 3 周开始加入双重任务进阶（运动加思考任务）。',
+    mm_i_mild: '18–23 分提示轻度认知障碍。训练应先保持简单、在督导下进行并以单任务为主；请与临床人员讨论此结果。',
+    mm_i_severe: '低于 18 分提示明显认知障碍。仅应在督导下训练，并建议转介专业人员评估。',
+    mm_invalid: '本次 MMSE 记录未通过校验（有领域得分高于其满分，和/或总分满分为 {m} 而非 30）。结果不可靠，请重新施测；确认前暂不进行双重任务训练。',
     s_bp: '反应测试（BlazePod）结果', bp_chart_h: '每次提示的反应时间', bp_raw: '单次反应时间', bp_env: '5 次滑动平均', bp_avg: '您的平均', bp_normln: '同侪常模', bp_out: '异常值（已剔除）', bp_cue: '提示序号',
     bp_avgrt: '平均反应时间', bp_norm: '同侪常模（平均反应时间）', bp_best: '最快一次', bp_slow: '最慢一次（有效）', bp_cv: '变异（CV）',
     bp_read: '每个点代表一次灯光提示——越低越快。平滑线显示趋势；虚线分别标示您的平均值与同年龄、同性别同侪常模。第一次反应特别慢通常是热身异常值；后段持续变慢可能代表疲劳或注意力下降。',
@@ -90,6 +108,15 @@
   };
 
   const ms = {
+    tier_basis: 'Asas tahap: {n} stesen dibenderakan ({list}); Indeks Keseimbangan {v}. Tinggi memerlukan ≥ 2 stesen dibenderakan dengan Indeks < 50, atau 1 stesen dibenderakan dengan Indeks < 35.',
+    s_mmse: 'Kognisi (MMSE)', mm_time: 'Masa diambil', mm_dual: 'Latihan dwi-tugas', mm_dual_y: 'Dibenarkan dari Minggu 3', mm_dual_n: 'Ditangguhkan',
+    mm_col_domain: 'Domain', mm_col_score: 'Skor', mm_col_status: 'Status', mm_ok: 'Sah', mm_over: 'Melebihi maksimum',
+    mm_domains_h: 'Prestasi domain (% daripada maksimum, dihadkan 100%)',
+    mm_why: 'Berjalan dan mengimbang sambil berfikir menggunakan sumber otak yang sama. Skor kognitif yang lebih rendah dikaitkan dengan gaya berjalan lebih perlahan, kos dwi-tugas lebih tinggi dan risiko jatuh lebih tinggi, jadi MMSE membimbing sejauh mana latihan dwi-tugas boleh ditambah dengan selamat.',
+    mm_i_normal: 'Skor 24–30 berada dalam julat normal. Keupayaan kognitif tidak mungkin menghadkan latihan keseimbangan, jadi progresi dwi-tugas (pergerakan + tugasan berfikir) boleh diperkenalkan dari Minggu 3 apabila satu tahap telah stabil.',
+    mm_i_mild: 'Skor 18–23 mencadangkan gangguan kognitif ringan. Pastikan sesi mudah, berpenyeliaan dan satu tugas dahulu; bincangkan keputusan ini dengan klinisian.',
+    mm_i_severe: 'Skor di bawah 18 mencadangkan gangguan kognitif ketara. Latihan hanya dengan penyeliaan dan rujukan untuk penilaian profesional disyorkan.',
+    mm_invalid: 'Data MMSE yang direkodkan gagal pengesahan (skor domain melebihi maksimum dan/atau jumlah daripada {m} dan bukan 30). Anggap keputusan tidak boleh dipercayai dan ulang saringan; latihan dwi-tugas ditangguhkan sehingga disahkan.',
     s_bp: 'Keputusan Reaksi BlazePod', bp_chart_h: 'Masa tindak balas bagi setiap isyarat', bp_raw: 'Masa setiap isyarat', bp_env: 'Purata bergerak 5 isyarat', bp_avg: 'Purata anda', bp_normln: 'Norma rakan sebaya', bp_out: 'Terpencil (dibuang)', bp_cue: 'Isyarat',
     bp_avgrt: 'Purata masa tindak balas', bp_norm: 'Norma rakan sebaya (purata RT)', bp_best: 'Isyarat terpantas', bp_slow: 'Isyarat paling perlahan (sah)', bp_cv: 'Kebolehubahan (CV)',
     bp_read: 'Setiap titik ialah satu isyarat lampu — lebih rendah lebih pantas. Garisan licin menunjukkan trend; garisan putus-putus menandakan purata anda dan norma rakan sebaya mengikut umur/jantina. Isyarat pertama yang sangat perlahan lazimnya ialah nilai terpencil pemanasan; peningkatan berterusan kemudian dalam set boleh bermaksud keletihan atau perhatian menurun.',
@@ -133,6 +160,15 @@
   };
 
   const ta = {
+    tier_basis: 'நிலைக்கான அடிப்படை: {n} நிலையம்(ங்கள்) கொடியிடப்பட்டன ({list}); சமநிலைக் குறியீடு {v}. “அதிகம்” நிலைக்கு குறைந்தது 2 கொடியிடப்பட்ட நிலையங்களும் குறியீடு < 50-உம், அல்லது 1 கொடியிடப்பட்ட நிலையமும் குறியீடு < 35-உம் தேவை.',
+    s_mmse: 'அறிவாற்றல் (MMSE)', mm_time: 'எடுத்த நேரம்', mm_dual: 'இரட்டைப் பணிப் பயிற்சி', mm_dual_y: 'வாரம் 3 முதல் அனுமதி', mm_dual_n: 'ஒத்திவைப்பு',
+    mm_col_domain: 'கூறு', mm_col_score: 'மதிப்பெண்', mm_col_status: 'நிலை', mm_ok: 'செல்லுபடி', mm_over: 'அதிகபட்சத்தை மீறுகிறது',
+    mm_domains_h: 'கூறு வாரியான செயல்திறன் (அதிகபட்சத்தின் %, 100% வரை)',
+    mm_why: 'சிந்தித்துக்கொண்டே நடப்பதும் சமநிலை காப்பதும் மூளையின் அதே வளங்களைப் பயன்படுத்துகின்றன. குறைந்த அறிவாற்றல் மதிப்பெண்கள் மெதுவான நடை, அதிக இரட்டைப் பணிச் செலவு, அதிக விழுதல் அபாயத்துடன் தொடர்புடையவை; எனவே இரட்டைப் பணிப் பயிற்சியை எவ்வளவு பாதுகாப்பாகச் சேர்க்கலாம் என்பதற்கு MMSE வழிகாட்டுகிறது.',
+    mm_i_normal: '24–30 மதிப்பெண் இயல்பு வரம்பு. அறிவாற்றல் திறன் சமநிலைப் பயிற்சியைத் தடுக்க வாய்ப்பில்லை; ஒரு நிலை நிலைப்படும்போது வாரம் 3 முதல் இரட்டைப் பணி முன்னேற்றம் (இயக்கம் + சிந்தனைப் பணி) அறிமுகப்படுத்தலாம்.',
+    mm_i_mild: '18–23 மதிப்பெண் லேசான அறிவாற்றல் குறைபாட்டைக் குறிக்கிறது. அமர்வுகளை எளிமையாக, மேற்பார்வையுடன், முதலில் ஒற்றைப் பணியாக வைத்திருக்கவும்; முடிவை மருத்துவருடன் கலந்தாலோசிக்கவும்.',
+    mm_i_severe: '18-க்குக் குறைவான மதிப்பெண் குறிப்பிடத்தக்க அறிவாற்றல் குறைபாட்டைக் குறிக்கிறது. மேற்பார்வையுடன் மட்டுமே பயிற்சி; நிபுணர் மதிப்பீட்டுக்குப் பரிந்துரை செய்யவும்.',
+    mm_invalid: 'பதிவான MMSE தரவு சரிபார்ப்பில் தோல்வியடைந்தது (கூறு மதிப்பெண்கள் அதிகபட்சத்தை மீறுகின்றன மற்றும்/அல்லது மொத்தம் 30-க்குப் பதில் {m}-இல்). முடிவை நம்பகமற்றதாகக் கருதி மீண்டும் சோதிக்கவும்; உறுதிசெய்யும் வரை இரட்டைப் பணிப் பயிற்சி ஒத்திவைக்கப்படுகிறது.',
     s_bp: 'BlazePod எதிர்வினை முடிவுகள்', bp_chart_h: 'ஒவ்வொரு குறிப்புக்கும் எதிர்வினை நேரம்', bp_raw: 'குறிப்பு வாரி நேரம்', bp_env: '5-குறிப்பு நகரும் சராசரி', bp_avg: 'உங்கள் சராசரி', bp_normln: 'சக இயல்பு', bp_out: 'விலகல் (நீக்கப்பட்டது)', bp_cue: 'குறிப்பு',
     bp_avgrt: 'சராசரி எதிர்வினை நேரம்', bp_norm: 'சக இயல்பு (சராசரி RT)', bp_best: 'வேகமான குறிப்பு', bp_slow: 'மெதுவான குறிப்பு (செல்லுபடி)', bp_cv: 'மாறுபாடு (CV)',
     bp_read: 'ஒவ்வொரு புள்ளியும் ஒரு ஒளிக் குறிப்பு — குறைவு = வேகம். மென்மையான கோடு போக்கைக் காட்டும்; புள்ளிக்கோடுகள் உங்கள் சராசரியையும் வயது/பாலின சக இயல்பையும் குறிக்கும். முதல் குறிப்பு மிகவும் மெதுவாக இருந்தால் அது பொதுவாக வெப்பமூட்டல் விலகல்; தொகுப்பின் பிற்பகுதியில் தொடர்ந்து மெதுவாவது சோர்வு அல்லது கவனச் சிதறலைக் குறிக்கலாம்.',
