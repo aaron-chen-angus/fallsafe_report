@@ -269,6 +269,68 @@
     };
   };
 
+
+  /* ---------- EMG waveform extraction (vector graphics on page 1 of the EMG reports) ---------- */
+  // The EMG station PDFs draw the 4-channel envelope as stroked vector paths. We replay the page's operator
+  // list, track the current transform matrix, pick the 4 series by stroke colour and calibrate the Y axis
+  // from the grid-line / tick-label geometry, so we recover real µV values (no OCR, no image processing).
+  const EMG_COLOURS = { LQ: [67, 97, 238], RQ: [123, 47, 190], LC: [16, 185, 129], RC: [245, 158, 11] };
+  const BLAZE_COLOURS = { RAW: [67, 97, 238], ENV: [239, 68, 68] };   // BlazePod per-cue reaction time chart
+  FS.extractWaveforms = async function (doc, OPS, kind) {
+    const COLS = kind === 'blaze' ? BLAZE_COLOURS : EMG_COLOURS, MINPTS = kind === 'blaze' ? 8 : 100;
+    try {
+      const page = await doc.getPage(1);
+      const ol = await page.getOperatorList();
+      const mul = (a, b) => [a[0] * b[0] + a[2] * b[1], a[1] * b[0] + a[3] * b[1], a[0] * b[2] + a[2] * b[3], a[1] * b[2] + a[3] * b[3], a[0] * b[4] + a[2] * b[5] + a[4], a[1] * b[4] + a[3] * b[5] + a[5]];
+      let ctm = [1, 0, 0, 1, 0, 0], stack = [], col = null, last = null; const strokes = [];
+      ol.fnArray.forEach((fn, i) => {
+        const a = ol.argsArray[i];
+        if (fn === OPS.save) stack.push([ctm, col]);
+        else if (fn === OPS.restore) { const t = stack.pop(); if (t) { ctm = t[0]; col = t[1]; } }
+        else if (fn === OPS.transform) ctm = mul(ctm, a);
+        else if (fn === OPS.setStrokeRGBColor) col = [a[0], a[1], a[2]];
+        else if (fn === OPS.constructPath) {
+          const ops = a[0], c = a[1]; let k = 0; const pts = [];
+          for (const op of ops) {
+            if (op === OPS.moveTo || op === OPS.lineTo) { pts.push([c[k], c[k + 1]]); k += 2; }
+            else if (op === OPS.curveTo) k += 6; else if (op === OPS.curveTo2 || op === OPS.curveTo3) k += 4; else if (op === OPS.rectangle) k += 4;
+          }
+          last = pts.map(p => [ctm[0] * p[0] + ctm[2] * p[1] + ctm[4], ctm[1] * p[0] + ctm[3] * p[1] + ctm[5]]);
+        } else if (fn === OPS.stroke && last) strokes.push({ col, pts: last });
+      });
+      const near = (c, t) => c && Math.abs(c[0] - t[0]) + Math.abs(c[1] - t[1]) + Math.abs(c[2] - t[2]) < 12;
+      const series = {};
+      for (const sk of strokes) for (const [k, t] of Object.entries(COLS)) if (sk.pts.length >= MINPTS && near(sk.col, t) && !series[k]) series[k] = sk.pts;
+      const keys = Object.keys(series); if (!keys.length) return null;
+      const xs = keys.flatMap(k => series[k].map(p => p[0])); const x0 = Math.min(...xs), x1 = Math.max(...xs), W = x1 - x0;
+      // horizontal grid lines (full-width segments of non-series strokes)
+      const hl = [];
+      for (const sk of strokes) { if (Object.values(COLS).some(t => near(sk.col, t))) continue; for (let i = 0; i + 1 < sk.pts.length; i++) { const p = sk.pts[i], q = sk.pts[i + 1]; if (Math.abs(p[1] - q[1]) < 0.01 && Math.abs(p[0] - q[0]) > 0.9 * W && Math.min(p[0], q[0]) > x0 - 3 && Math.max(p[0], q[0]) < x1 + 3) hl.push(p[1]); } }
+      const gl = [...new Set(hl.map(v => Math.round(v * 10) / 10))].sort((a, b) => a - b);
+      // tick labels
+      const tc = await page.getTextContent(); const yl = [], tl = [];
+      for (const it of tc.items) {
+        const s = it.str.trim(), x = it.transform[4], y = it.transform[5];
+        if (/^\d+(\.\d+)?$/.test(s) && x < x0 - 4) yl.push({ v: +s, y });
+        else if (/^\d+(\.\d+)?\s*s$/.test(s)) tl.push(parseFloat(s));
+      }
+      if (yl.length < 2 || !gl.length) return null;
+      yl.sort((a, b) => a.v - b.v);
+      const slope = (yl[yl.length - 1].y - yl[0].y) / (yl[yl.length - 1].v - yl[0].v);   // pts per µV
+      let best = null;
+      for (const g0 of gl) { const c = g0 - slope * yl[0].v; let err = 0; for (const l of yl) err += Math.min(...gl.map(g => Math.abs(c + slope * l.v - g))); if (!best || err < best.err) best = { c, err }; }
+      if (!(slope > 0) || best.err > 2 * yl.length) return null;
+      const tMax = tl.length ? Math.max(...tl) : null;
+      const ch = {};
+      for (const k of keys) {
+        // collapse any duplicate x (keeps order) and convert to µV / seconds
+        ch[k] = series[k].map(p => Math.max(0, Math.round((p[1] - best.c) / slope * 10) / 10));
+      }
+      const n = ch[keys[0]].length;
+      return { n, tMax, unit: 'µV', ch, yMaxAxis: yl[yl.length - 1].v };
+    } catch (e) { return null; }
+  };
+
   /* ---------- Public: parse one PDF ---------- */
   FS.parseLines = function (lines, filename) {
     const station = FS.detectStation(filename, lines);
@@ -283,6 +345,9 @@
     const buf = new Uint8Array(await file.arrayBuffer());
     const doc = await pdfjsLib.getDocument({ data: buf }).promise;
     const lines = await FS.extractLines(doc);
-    return FS.parseLines(lines, file.name);
+    const res = FS.parseLines(lines, file.name);
+    if (res.ok && /^EMG_/.test(res.station)) res.wave = await FS.extractWaveforms(doc, pdfjsLib.OPS);
+    if (res.ok && res.station === 'BLAZEPOD') res.wave = await FS.extractWaveforms(doc, pdfjsLib.OPS, 'blaze');
+    return res;
   };
 })(typeof window !== 'undefined' ? window : globalThis);

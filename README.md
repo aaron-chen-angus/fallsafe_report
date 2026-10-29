@@ -104,7 +104,8 @@ fallsafe-report-generator/
         ├── exercises.js       # FallSafe+ exercise library (4 languages, domain loadings)
         ├── programme.js       # Gap-weighted selection and 4-week periodisation
         ├── i18n.js            # Report language packs (en, zh, ms, ta)
-        ├── charts.js          # Dependency-free canvas charts (radar, bars, bullets, symmetry, load, gauges)
+        ├── i18n-extra.js      # v1.1 language-pack extension (EMG section, priorities, deep-dive charts, targets)
+        ├── charts.js          # Dependency-free canvas charts (radar, bars, bullets, symmetry, load, gauges, EMG waveform, leg activation map, heatmap, phase bar, vertical bars, range)
         ├── report.js          # Report composer (block model shared by screen and PDF)
         ├── export.js          # A4 pagination, rasterisation and PDF assembly
         └── app.js             # UI controller
@@ -349,6 +350,7 @@ Each rule compares a metric with its reference threshold and emits a finding tag
 | TTT terrain adaptability | PR | < 35 | 35–49 | ≥ 65 |
 | Calf / quad symmetry ratio | PR, SB | — | < 0.65 or > 1.54 | 0.75–1.33 |
 | Co-activation index | CO, SB | > 0.65 | 0.46–0.65 | ≤ 0.45 |
+| EMG waveform L/R amplitude (quadriceps, calf) | DB/PR, SB | — | ratio ≥ 3× | (Minor if 1.5–3×; ratios ≥ 5× or involving a near-silent channel are marked low confidence) |
 | BlazePod score | CO | < 40 | 40–64 | ≥ 65 |
 | STS repetitions | DB, SB | < normal band | (within band: Minor) | > band |
 | TUG time | DB | > 13.5 s | 10–13.5 s | < 10 s |
@@ -363,9 +365,11 @@ The **Key Gaps by Domain** section lists up to four highest-severity gaps and tw
 
 | Tier | Rule |
 |---|---|
-| **High** | Any clinical trigger — FSST > 15 s; near-fall event; TUG > 13.5 s; gait velocity < 0.8 m/s; Overall Balance Index < 35 — or ≥ 3 priority balance findings |
-| **Moderate** | Index < 55, or ≥ 3 moderate findings, or ≥ 1 priority finding |
+| **High** | **Converging evidence** — clinical flags from **≥ 2 independent stations** (FSST > 15 s or near-fall; TUG > 13.5 s or gait velocity < 0.8 m/s) **and** Overall Balance Index < 50; **or** a severe peer-relative deficit (Overall Balance Index < 35) |
+| **Moderate** | Any single clinical flag, or Index < 55, or ≥ 3 moderate findings, or ≥ 1 priority finding |
 | **Low** | Otherwise |
+
+*Calibration note (v1.1).* The first release escalated to High on any single flag, which over-called risk: single-test cut-offs have modest specificity, were derived in adults ≥ 65 years, and the FSST near-fall flag is sensitive to camera tilt (see the data-quality audit). The tier now requires independent corroboration across stations plus a below-average peer-relative index. FSST and near-fall count as one station; TUG time and gait velocity count as one station. The individual flags are still listed in the report so no signal is hidden.
 
 The tier is a *screening* classification that determines supervision recommendations and programme starting levels; it is not a validated fall-probability estimate (Section 17).
 
@@ -387,6 +391,8 @@ Sensor batteries generate artefacts; reporting them explicitly is a core safety 
 | Implausible %MVC | Any channel > 150 % MVC | EMG–MVC normalisation declared invalid |
 | MVC–EMG linkage | EMG states "MVC not collected" while an MVC file exists | Pipeline linkage warning |
 | Quadriceps RMS disparity | L/R RMS ratio > 5 | Probable electrode/contact artefact |
+| Near-silent EMG channel | Waveform mean < 5 % of the strongest channel | Amplitude comparisons involving the channel flagged low confidence; check electrode contact, skin preparation and gain |
+| EMG window mismatch | Waveform axis span differs > 20 % from the scored segment duration (e.g., 60 s axis vs 12 s segment) | Reviewer asked to confirm the window used for feature computation |
 | Domain label mismatch | e.g. TTT labelled "Static Balance" | Interpreted by station construct |
 | FSST double support ≥ 95 % | Conservative step detection | Stability may be understated |
 | FSST near-fall at < 30° with low angular velocity | Possible camera-tilt artefact | Verify camera levelness |
@@ -487,20 +493,32 @@ Evidence highlights for the library: narrow-base and tandem gait stress mediolat
 | Section | Content | Visual |
 |---|---|---|
 | Title | Client card (name, ID, age, sex, height, weight, BMI, session date/time, stations analysed), Overall Balance Index, screening tier | Index and tier badges |
-| 01 Executive Summary | Session, index, tier and triggers, strongest/weakest domain, pattern insights, programme focus | Tier panel |
-| 02 Balance Domain Profile | Domain scores, bands, confidence, coverage, definitions | **Radar** with peer-average (50) and target (65) rings; **gauge rings** |
-| 03 Key Gaps by Domain | Up to 4 gaps + 2 strengths per domain; station contributions with weights and quality factors | Severity chips, band-coloured panels |
-| 04 Station Results | Station scores; clinical reference positions; per-station metric tables (missing stations shown dimmed) | **Score bars**, **bullet charts** (FSST time, TUG time, median RT, STS reps, gait velocity, step-time CV) |
-| 05 Limb Symmetry Profile | Stride length/time, leg-press MVC, FSST step length (low-confidence items marked *) | **Butterfly chart** with asymmetry % |
-| 06 Supporting Factors | Strength (STS, MVC) and cognition (MMSE, dual-task decision) | — |
-| 07 Detailed Findings | All findings sorted by severity with stations and domains | Table |
-| 08 Data Quality Audit | All integrity checks with grade and consequence | Table |
-| 09 Programme | Rationale, dose, session structure, supervision, dual-task, gating | Session tiles |
+| 01 Executive Summary | Session, index, tier and screening flags, strongest/weakest domain, pattern insights, programme focus; **"How to read the scores"** legend (band colours and thresholds) | Tier panel, band chips |
+| 02 Your Top Priorities | The three lowest non-strength domains, each with its two most important pieces of evidence and the prescribed exercises that address it | Ranked, band-coloured priority cards |
+| 03 Balance Domain Profile | Domain scores, bands, confidence, coverage, definitions; **station × domain contribution heatmap** with station weights and domain totals | **Radar** with peer-average (50) and target (65) rings; **gauge rings**; **heatmap** |
+| 04 Key Gaps by Domain | Up to 4 gaps + 2 strengths per domain; station contributions with weights and quality factors | Severity chips, band-coloured panels |
+| 05 Station Results | Station scores; clinical reference positions; **per-station deep dives** with plain-language explanation; per-station metric tables (missing stations shown dimmed) | **Score bars**, **bullet charts**; FSST performance profile, error counts and clockwise/anticlockwise balance; **TUG phase bar** (stand, walk, cone, turn-to-sit, sit); STS tempo range plus hip and trunk angle bars; BlazePod percentile and accuracy gauge |
+| 06 Muscle Activation (EMG) | For each EMG station (Dynamic Balance and Terrain Trek): the four-channel envelope over time, a leg activation map (share of activity per muscle, left vs right), left/right average activation, per-channel SNR/average/peak/share table, plain-language readings and any related findings or data-quality notes | **EMG waveform chart**, **leg activation map**, **butterfly L/R chart** |
+| 07 BlazePod Reaction Results | Reaction score, average and median RT, peer norm, percentile, accuracy, fastest/slowest valid cue; per-cue reaction time with 5-cue moving average, the participant's average and the peer norm, outlier cues marked; warm-up/fatigue trend (first vs last third of valid cues, ±10 % threshold) | **Per-cue reaction-time chart**, KPI tiles, percentile bullet, accuracy gauge |
+| 08 Limb Symmetry Profile | Stride length/time, leg-press MVC, FSST step length (low-confidence items marked *) | **Butterfly chart** with asymmetry % |
+| 08 Supporting Factors | Strength (STS, MVC) and cognition (MMSE, dual-task decision); MVC against age/sex norm bands and MMSE domain performance (drawn only when the underlying data pass validation) | Bullet charts, domain bars |
+| 09 Detailed Findings | All findings sorted by severity with stations and domains | Table |
+| 10 Data Quality Audit | All integrity checks with grade and consequence | Table |
+| 11 Programme | Rationale, dose, session structure, supervision, dual-task, gating | Session tiles |
 | — Periodisation | Weekly volume and level | **Load chart** (sets bars + mean level line), phase cards, **4-week calendar** |
-| 10 Prescribed Exercises | Purpose, scripted level instructions for prescribed levels, ADL transfer, key muscles | Exercise cards |
-| 11 Weekly Prescription | Sets × reps/holds/passes per week with level | Dose table |
-| 12 Progression & Safety | Progression, regression and safety rules | Three panels |
-| 13–14 Methodology & References | Scoring framework, weightage table, APA references, disclaimer | Table |
+| 12 Prescribed Exercises | Purpose, scripted level instructions for prescribed levels, ADL transfer, key muscles | Exercise cards |
+| 13 Weekly Prescription | Sets × reps/holds/passes per week with level | Dose table |
+| 14 Re-test Targets (Week 4) | Conservative, individual targets for the metrics that showed gaps (≈ +8 domain points, −10 % FSST time, half the FSST errors, +10 terrain-adaptability points, L/R quadriceps balance 0.75–1.33, TUG −0.5 s, STS +2 repetitions, BlazePod median RT −5 %) | Table |
+| 15 Progression & Safety | Progression, regression and safety rules | Three panels |
+| 16–17 Methodology & References | Scoring framework, weightage table, screening-tier rule, APA references, disclaimer | Table |
+
+Section numbers are assigned dynamically; sections whose source stations are not supplied are omitted.
+
+### 13.1 Waveform extraction (EMG and BlazePod)
+
+The EMG station PDFs draw the four-channel envelope as **vector paths**, not as an image, so the generator recovers the underlying values rather than screen-scraping a picture. `FS.extractWaveforms` replays the first page's pdf.js operator list while tracking the current transformation matrix, selects the four 500-point series by stroke colour (left quadriceps, right quadriceps, left gastrocnemius, right gastrocnemius), and calibrates the µV axis from the horizontal grid lines and the numeric tick labels (the zero line is the grid line that places every labelled tick onto a grid line; the axis slope comes from the label spacing). The time axis is taken from the printed tick labels (e.g., `0 … 25 s`). Per-channel statistics (mean, peak, SD, share of total activity, left/right ratio, near-silent detection) are computed in `analysis.js` and listed in the JSON export.
+
+Limitations: the recovered series are the **smoothed envelope plotted by the pipeline**, not raw EMG, so the report describes relative activation patterns rather than %MVC. The extractor relies on the pipeline's colour palette; if the pipeline changes its palette or chart geometry the section is replaced by a notice and the rest of the report is unaffected.
 
 ---
 
@@ -518,6 +536,7 @@ Evidence highlights for the library: narrow-base and tandem gait stress mediolat
 - **Extraction.** pdf.js text items are grouped into visual lines by baseline (±3 px) and ordered left-to-right; cells separated by > 12 px gaps are joined with `|`. Letter-spaced section headers (e.g., `T R A N S I T I O N T I M E S`) are detected and used to disambiguate repeated labels (e.g., *Average* in transition vs standing times). Parsing stops at the reference-norms appendix so that threshold tables are never mistaken for results.
 - **Station detection.** File-name suffix (`_FSST`, `_EMG_DB`, `_EMG_TTT`, `_BLAZEPOD`, `_STS`, `_TUG`, `_MVC`, `_MMSE`), otherwise page-header text.
 - **Client metadata.** `Name: … | 50 yrs · Male · 173.0 cm · 77.1 kg` and the file-name pattern `NAME_ID_Sex_Age`; the most frequent value across files is used.
+- **EMG waveforms.** For `_EMG_DB` and `_EMG_TTT` files the chart on page 1 is additionally read from the PDF's vector graphics (Section 13.1).
 - **Robustness.** Unrecognised files are listed and skipped; a station uploaded twice keeps the latest file.
 - **Extending.** Add a parser in `parser.js` (`P.<STATION> = g => ({...})`) using `g.n(label, section)` / `g.get(...)` / `g.after[label]`.
 
@@ -537,7 +556,8 @@ Evidence highlights for the library: narrow-base and tandem gait stress mediolat
 |---|---|---|---|
 | Domain weights | Expert-assigned from biomechanical task analysis | Not fitted to outcome data | Logistic/ordinal regression against prospective falls (6- and 12-month) at n ≥ 100 |
 | Anchor curves (FSST, TUG, gait speed) and STS IQR model | Derived from published cut-offs and norms | Interpolation between anchors is a modelling assumption | Calibrate against FallSafe+ cohort distributions (n ≥ 30 per age/sex cell) |
-| Screening tier | Rule-based | Not a probability of falling | ROC analysis vs prospective falls |
+| Screening tier | Rule-based (converging-evidence rule; recalibrated in v1.1 after the original single-flag rule over-called High risk) | Not a probability of falling; cut-offs derived in adults ≥ 65 years | ROC analysis vs prospective falls; age-specific cut-offs for adults < 65 |
+| EMG waveform analysis | Descriptive amplitude statistics from the pipeline's smoothed envelope | Not %MVC-normalised; depends on pipeline chart format | Raw-signal export from the pipeline and %MVC validation |
 | BlazePod norms | Adapted from reaching literature | Not protocol-specific | Cohort recalibration |
 | EMG composites | Ratio/CV-based | %MVC only valid with verified MVC–EMG calibration | Within-dataset percentile and %MVC validation |
 | Computer-vision metrics | Monocular pose estimation | Lateral step length, camera tilt and occlusion artefacts | Concurrent validity vs motion capture / instrumented walkway |

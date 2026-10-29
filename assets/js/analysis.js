@@ -122,6 +122,28 @@
     };
   }
 
+
+  /* ---------- EMG waveform summary (envelope statistics from the station PDF graph) ---------- */
+  function waveStats(w, d) {
+    if (!w || !w.ch) return null;
+    const keys = ['LQ', 'RQ', 'LC', 'RC'].filter(k => w.ch[k]);
+    if (!keys.length) return null;
+    const ch = {};
+    for (const k of keys) {
+      const a = w.ch[k]; const mu = a.reduce((s, v) => s + v, 0) / a.length;
+      const sd = Math.sqrt(a.reduce((s, v) => s + (v - mu) * (v - mu), 0) / a.length);
+      ch[k] = { mean: r1(mu), peak: r1(Math.max(...a)), sd: r1(sd), snr: d && d.ch && d.ch[k] ? d.ch[k].snr : null };
+    }
+    const tot = keys.reduce((s, k) => s + ch[k].mean, 0) || 1;
+    const top = Math.max(...keys.map(k => ch[k].mean));
+    for (const k of keys) { ch[k].share = r1(100 * ch[k].mean / tot); ch[k].rel = top ? ch[k].mean / top : 0; }
+    const flat = keys.filter(k => ch[k].mean < 0.05 * top);
+    const dom = keys.slice().sort((a, b) => ch[b].mean - ch[a].mean)[0];
+    const pair = (L, R) => (ch[L] && ch[R] && ch[L].mean > 0 && ch[R].mean > 0) ? { l: ch[L].mean, r: ch[R].mean, ratio: r1(Math.max(ch[L].mean, ch[R].mean) / Math.min(ch[L].mean, ch[R].mean)), side: ch[L].mean > ch[R].mean ? 'L' : 'R',
+      lShare: Math.round(100 * ch[L].mean / (ch[L].mean + ch[R].mean)), rShare: Math.round(100 * ch[R].mean / (ch[L].mean + ch[R].mean)) } : null;
+    return { n: w.n, tMax: w.tMax, durationS: d ? d.durationS : null, ch, keys, dom, flat, quad: pair('LQ', 'RQ'), calf: pair('LC', 'RC'), series: w.ch };
+  }
+
   /* ---------- Main analysis ---------- */
   FS.analyse = function (parsed) {
     const S = {};          // station key -> parsed result
@@ -197,6 +219,15 @@
       if (v === null) return;
       add(id, key, ['CO', 'SB'], v > 0.65 ? 'high' : v > 0.45 ? 'mod' : 'pos', { v });
     };
+    // waveform-derived checks (channel dropout, window mismatch, left/right amplitude imbalance)
+    const waveChecks = (key, w, calfDom, quadDom) => {
+      if (!w) return;
+      if (w.flat.length) flag('dq_emg_flat', key, w.flat.length >= 2 ? 'mod' : 'low', { list: w.flat });
+      if (w.tMax && w.durationS && Math.abs(w.tMax - w.durationS) / w.tMax > 0.2) flag('dq_emg_window', key, 'low', { t: w.tMax, d: w.durationS });
+      const lowconf = side => w.flat.includes(side + 'Q') || w.flat.includes(side + 'C');
+      const one = (pair, m, dom, L, R) => { if (!pair || pair.ratio < 1.5) return; add('f_emg_wave', key, dom, pair.ratio >= 3 ? 'mod' : 'low', { task: key, m, side: pair.side, x: pair.ratio, a: Math.max(pair.l, pair.r), b: Math.min(pair.l, pair.r), lowconf: w.flat.includes(L) || w.flat.includes(R) || pair.ratio >= 5 }); };
+      one(w.quad, 'quad', quadDom, 'LQ', 'RQ'); one(w.calf, 'calf', calfDom, 'LC', 'RC');
+    };
     if (S.EMG_DB) {
       const d = S.EMG_DB.data; const sc = scoreEMG(d, 'DB'); st.EMG_DB = { data: d, ...sc }; q.EMG_DB = emgQuality('EMG_DB', d);
       if (d.composite !== null) add('f_db_comp', 'EMG_DB', ['DB', 'PR'], { priority: 'high', moderate: 'mod', monitor: 'low', strength: 'pos' }[FS.band(d.composite)], { v: d.composite });
@@ -205,6 +236,7 @@
       symFinding('f_db_quadsym', 'EMG_DB', d.quadSym, ['DB', 'SB'], false);
       coactFinding('f_db_coact', 'EMG_DB', d.coactL ?? d.coactR);
       if (d.domainLabel && !/dynamic/i.test(d.domainLabel)) flag('dq_emg_label', 'EMG_DB', 'low', { label: d.domainLabel, exp: 'Dynamic Balance' });
+      st.EMG_DB.wave = waveStats(S.EMG_DB.wave, d); waveChecks('EMG_DB', st.EMG_DB.wave, ['PR', 'SB'], ['DB', 'SB']);
     }
     if (S.EMG_TTT) {
       const d = S.EMG_TTT.data; const sc = scoreEMG(d, 'TTT'); st.EMG_TTT = { data: d, ...sc }; q.EMG_TTT = emgQuality('EMG_TTT', d);
@@ -216,6 +248,7 @@
       symFinding('f_ttt_calfsym', 'EMG_TTT', d.calfSym, ['PR', 'SB'], calfLow);
       coactFinding('f_ttt_coact', 'EMG_TTT', d.coactL ?? d.coactR);
       if (d.domainLabel && /static/i.test(d.domainLabel)) flag('dq_emg_label', 'EMG_TTT', 'low', { label: d.domainLabel, exp: 'Terrain Trek / Proprioception' });
+      st.EMG_TTT.wave = waveStats(S.EMG_TTT.wave, d); waveChecks('EMG_TTT', st.EMG_TTT.wave, ['PR', 'SB'], ['PR', 'DB']);
     }
 
     /* --- BlazePod --- */
@@ -224,6 +257,16 @@
       if (d.score !== null) add('f_bp_score', 'BLAZEPOD', ['CO'], d.score < 40 ? 'high' : d.score < 65 ? 'mod' : 'pos', { v: d.score, rt: d.medianRtMs, pc: d.percentile });
       if (d.accuracyPct !== null) add('f_bp_acc', 'BLAZEPOD', ['CO'], d.accuracyPct >= 95 ? 'pos' : d.accuracyPct >= 85 ? 'low' : 'mod', { v: d.accuracyPct });
       if (d.rtCV !== null && d.rtCV > 0.25) add('f_bp_cv', 'BLAZEPOD', ['CO'], 'low', { v: d.rtCV });
+      const bw = S.BLAZEPOD.wave;
+      if (bw && bw.ch && bw.ch.RAW && bw.ch.RAW.length >= 6) {
+        const raw = bw.ch.RAW, srt = raw.slice().sort((x, y) => x - y), med = srt[Math.floor(srt.length / 2)];
+        const outIdx = raw.map((v, i) => (v > 2 * med ? i : -1)).filter(i => i >= 0);
+        const clean = raw.filter((v, i) => !outIdx.includes(i)), th3 = Math.max(2, Math.floor(clean.length / 3));
+        const first = mean(clean.slice(0, th3)), last = mean(clean.slice(-th3)), trendPct = first ? (last - first) / first * 100 : 0;
+        st.BLAZEPOD.cues = { raw, env: bw.ch.ENV || null, outIdx, best: Math.min(...clean), worst: Math.max(...clean), median: med, mean: mean(raw), trendPct: r1(trendPct), avgLine: d.avgRtMs };
+        if (trendPct <= -10) add('f_bp_improve', 'BLAZEPOD', ['CO'], 'pos', { v: Math.round(-trendPct) });
+        else if (trendPct >= 10) add('f_bp_slow', 'BLAZEPOD', ['CO'], 'low', { v: Math.round(trendPct) });
+      }
       const totalCues = (d.cuesAfter || 0) + (d.outliers || 0);
       if (totalCues && d.outliers / totalCues > 0.15) flag('dq_bp_outliers', 'BLAZEPOD', 'low', { v: d.outliers, n: totalCues });
       if (client.age && d.peerNormMs) {
@@ -306,15 +349,20 @@
 
     /* --- Fall-risk screening tier --- */
     const sevCount = s => F.filter(f => f.sev === s && !['ST', 'CG'].includes(f.dom[0])).length;
-    const triggers = [];
-    if (st.FSST && st.FSST.data.timeS > 15) triggers.push('t_fsst');
-    if (st.FSST && st.FSST.data.nearFall) triggers.push('t_nearfall');
-    if (st.TUG && st.TUG.data.timeS > 13.5) triggers.push('t_tug');
-    if (st.TUG && st.TUG.data.gaitVel !== null && st.TUG.data.gaitVel < 0.8) triggers.push('t_vel');
-    if (index !== null && index < 35) triggers.push('t_index');
+    // Single-test cut-offs have modest specificity (and were derived in adults ≥65), so one flag raises the
+    // tier to Moderate only. HIGH needs converging evidence: flags from ≥2 independent stations AND a
+    // below-average Balance Index (<50), or a severe peer-relative deficit (Index <35).
+    const triggers = [], flagStations = new Set();
+    const trig = (id, stn) => { triggers.push(id); flagStations.add(stn); };
+    if (st.FSST && st.FSST.data.timeS > 15) trig('t_fsst', 'FSST');
+    if (st.FSST && st.FSST.data.nearFall) trig('t_nearfall', 'FSST');
+    if (st.TUG && st.TUG.data.timeS > 13.5) trig('t_tug', 'TUG');
+    if (st.TUG && st.TUG.data.gaitVel !== null && st.TUG.data.gaitVel < 0.8) trig('t_vel', 'TUG');
+    const severe = index !== null && index < 35;
+    if (severe) triggers.push('t_index');
     let tier = 'low';
-    if (triggers.length || sevCount('high') >= 3) tier = 'high';
-    else if ((index !== null && index < 55) || sevCount('mod') >= 3 || sevCount('high') >= 1) tier = 'moderate';
+    if (severe || (flagStations.size >= 2 && index !== null && index < 50)) tier = 'high';
+    else if (triggers.length || (index !== null && index < 55) || sevCount('mod') >= 3 || sevCount('high') >= 1) tier = 'moderate';
 
     // ranking of gaps
     const ranked = FS.DOMAINS.filter(D => domains[D].score !== null).sort((a, b) => domains[a].score - domains[b].score);
